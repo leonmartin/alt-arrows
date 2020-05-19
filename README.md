@@ -1,3 +1,3 @@
 # alt-arrows README
 
-This is the README for your extension "alt-arrows". Similar to `Alt+Up` or `Alt+Down`, this extension enables moving selected text rifght/left by pressing `Alt+Right`/`Alt+Left`.
+Similar to the well-known key bindings `Alt+Up` or `Alt+Down`, the "alt-arrows" extension enables moving selected text right/left by pressing `Alt+Right`/`Alt+Left`.
