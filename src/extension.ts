@@ -1,20 +1,18 @@
 import * as vscode from "vscode";
 
-function moveSelection(direction: String) {
-  // get active text editor
-  const editor = vscode.window.activeTextEditor;
-
-  // return if editor is null
-  if (!editor) {
-    console.log("ERROR: editor is null!");
-    return;
-  }
-
-  // get currently selected text
-  const selText = editor?.document.getText(editor.selection);
+function moveSelection(
+  direction: String,
+  editor: vscode.TextEditor,
+  selection: vscode.Selection
+) {
+  // get selected text
+  const selStart = selection.start;
+  const selEnd = selection.end;
+  const selText = editor.document.getText(selection);
   if (selText === "") {
     return;
   }
+
   console.log("alt+" + direction + ":\t" + selText);
 
   //
@@ -23,10 +21,7 @@ function moveSelection(direction: String) {
   if (direction === "right") {
     // get next char
     const nextChar = editor.document.getText(
-      new vscode.Range(
-        editor.selection.end,
-        editor.selection.end.translate(0, 1)
-      )
+      new vscode.Range(selEnd, selEnd.translate(0, 1))
     );
 
     // return if there is no next char
@@ -37,18 +32,16 @@ function moveSelection(direction: String) {
     // edit text
     editor.edit((textEditor) => {
       // temporarly delete selected text
-      textEditor.delete(
-        new vscode.Range(editor.selection.start, editor.selection.end)
-      );
+      textEditor.delete(new vscode.Range(selStart, selEnd));
 
       // insert selected text one character to the right
-      textEditor.insert(editor.selection.end.translate(0, 1), selText ?? "");
+      textEditor.insert(selEnd.translate(0, 1), selText);
     });
 
     // update selection in editor
     editor.selection = new vscode.Selection(
-      editor.selection.start.translate(0, 1),
-      editor.selection.start.translate(0, (selText ?? "").length + 1)
+      selStart.translate(0, 1),
+      selStart.translate(0, selText.length + 1)
     );
 
     //
@@ -56,43 +49,57 @@ function moveSelection(direction: String) {
     // ALT+LEFT
   } else if (direction === "left") {
     // return if the selection starts at the beginning of the line
-    if (editor.document.offsetAt(editor.selection.start) === 0) {
+    if (editor.document.offsetAt(selStart) === 0) {
       return;
     }
-
+    
+    // return if translating -1 fails, i.e., there is no previous position
+    try {
+      selStart.translate(0, -1);
+    } catch (e) {
+      return;
+    }
+    
     // get previous char
     const prevChar = editor.document.getText(
-      new vscode.Range(
-        editor.selection.start.translate(0, -1),
-        editor.selection.start
-      )
+      new vscode.Range(selStart.translate(0, -1), selStart)
     );
-
-    // return if there is no previous char
-    if (prevChar === "") {
-      return;
-    }
 
     // edit text
     editor.edit((textEditor) => {
       // temporarly delete previous char
-      textEditor.delete(
-        new vscode.Range(
-          editor.selection.start.translate(0, -1),
-          editor.selection.start
-        )
-      );
+      textEditor.delete(new vscode.Range(selStart.translate(0, -1), selStart));
 
       // insert previous character after selected text
-      textEditor.insert(editor.selection.end, prevChar ?? "");
+      textEditor.insert(selEnd, prevChar);
     });
 
     // update selection in editor
     editor.selection = new vscode.Selection(
-      editor.selection.start.translate(0, -1),
-      editor.selection.end.translate(0, -1)
+      selStart.translate(0, -1),
+      selEnd.translate(0, -1)
     );
   }
+}
+
+function moveSelections(direction: String) {
+  // get active text editor
+  const editor = vscode.window.activeTextEditor;
+
+  // return if editor is null
+  if (!editor) {
+    console.log("ERROR: editor is null!");
+    return;
+  }
+
+  console.log(editor.selections);
+
+  const currentSelections = editor.selections;
+
+  // TODO: only the moving of the first selection is excuted; is possibly caused by promise of edit method
+  currentSelections.forEach((selection) => {
+    moveSelection(direction, editor, selection);
+  });
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -101,14 +108,14 @@ export function activate(context: vscode.ExtensionContext) {
   let altPlusRight = vscode.commands.registerCommand(
     "alt-arrows.altPlusRight",
     () => {
-      moveSelection("right");
+      moveSelections("right");
     }
   );
 
   let altPlusLeft = vscode.commands.registerCommand(
     "alt-arrows.altPlusLeft",
     () => {
-      moveSelection("left");
+      moveSelections("left");
     }
   );
 
