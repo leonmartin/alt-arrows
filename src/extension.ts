@@ -1,5 +1,29 @@
 import * as vscode from "vscode";
 
+function updateSelections(
+  direction: String,
+  editor: vscode.TextEditor,
+  selections: vscode.Selection[]
+) {
+  selections.forEach((selection) => {
+    const selStart = selection.start;
+    const selEnd = selection.end;
+
+    // TODO: only primary selection appears to be editable; "editor.selections[n] = something" does not change anything
+    if (direction === "right") {
+      editor.selection = new vscode.Selection(
+        selStart.translate(0, 1),
+        selEnd.translate(0, 1)
+      );
+    } else if (direction === "left") {
+      editor.selection = new vscode.Selection(
+        selStart.translate(0, -1),
+        selEnd.translate(0, -1)
+      );
+    }
+  });
+}
+
 function moveSelections(direction: String) {
   // get active text editor
   const editor = vscode.window.activeTextEditor;
@@ -9,8 +33,6 @@ function moveSelections(direction: String) {
     console.log("ERROR: editor is null!");
     return;
   }
-
-  console.log(editor.selections);
 
   const currentSelections = editor.selections;
 
@@ -29,10 +51,9 @@ function moveSelections(direction: String) {
         const nextChar = editor.document.getText(
           new vscode.Range(selEnd, selEnd.translate(0, 1))
         );
-        console.log(nextChar);
 
-        // return if there is no next char
-        if (nextChar === "") {
+        // return if there is no next char or selText is empty
+        if (nextChar === "" || selText === "") {
           return;
         }
 
@@ -41,14 +62,10 @@ function moveSelections(direction: String) {
 
         // insert selected text one character to the right
         textEditor.insert(selEnd.translate(0, 1), selText);
-
-        // TODO: update selection in editor
-        editor.selection = new vscode.Selection(
-          selStart.translate(0, 1),
-          selStart.translate(0, selText.length + 1)
-        );
       });
     });
+
+    updateSelections(direction, editor, currentSelections);
 
     //
     //
@@ -61,8 +78,8 @@ function moveSelections(direction: String) {
         const selEnd = selection.end;
         const selText = editor.document.getText(selection);
 
-        // return if the selection starts at the beginning of the line
-        if (editor.document.offsetAt(selStart) === 0) {
+        // return if the selection starts at the beginning of the line or selText is empty
+        if (editor.document.offsetAt(selStart) === 0 || selText === "") {
           return;
         }
 
@@ -85,12 +102,6 @@ function moveSelections(direction: String) {
 
         // insert previous character after selected text
         textEditor.insert(selEnd, prevChar);
-
-        // TODO: update selection in editor
-        editor.selection = new vscode.Selection(
-          selStart.translate(0, -1),
-          selEnd.translate(0, -1)
-        );
       });
     });
   }

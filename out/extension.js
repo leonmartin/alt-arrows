@@ -2,6 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
+function updateSelections(direction, editor, selections) {
+    selections.forEach((selection) => {
+        const selStart = selection.start;
+        const selEnd = selection.end;
+        // TODO: only primary selection appears to be editable; "editor.selections[n] = something" does not change anything
+        if (direction === "right") {
+            editor.selection = new vscode.Selection(selStart.translate(0, 1), selEnd.translate(0, 1));
+        }
+        else if (direction === "left") {
+            editor.selection = new vscode.Selection(selStart.translate(0, -1), selEnd.translate(0, -1));
+        }
+    });
+}
 function moveSelections(direction) {
     // get active text editor
     const editor = vscode.window.activeTextEditor;
@@ -10,7 +23,6 @@ function moveSelections(direction) {
         console.log("ERROR: editor is null!");
         return;
     }
-    console.log(editor.selections);
     const currentSelections = editor.selections;
     //
     //
@@ -24,19 +36,17 @@ function moveSelections(direction) {
                 const selText = editor.document.getText(selection);
                 // get next char
                 const nextChar = editor.document.getText(new vscode.Range(selEnd, selEnd.translate(0, 1)));
-                console.log(nextChar);
-                // return if there is no next char
-                if (nextChar === "") {
+                // return if there is no next char or selText is empty
+                if (nextChar === "" || selText === "") {
                     return;
                 }
                 // temporarly delete selected text
                 textEditor.delete(new vscode.Range(selStart, selEnd));
                 // insert selected text one character to the right
                 textEditor.insert(selEnd.translate(0, 1), selText);
-                // TODO: update selection in editor
-                editor.selection = new vscode.Selection(selStart.translate(0, 1), selStart.translate(0, selText.length + 1));
             });
         });
+        updateSelections(direction, editor, currentSelections);
         //
         //
         // ALT+LEFT
@@ -48,8 +58,8 @@ function moveSelections(direction) {
                 const selStart = selection.start;
                 const selEnd = selection.end;
                 const selText = editor.document.getText(selection);
-                // return if the selection starts at the beginning of the line
-                if (editor.document.offsetAt(selStart) === 0) {
+                // return if the selection starts at the beginning of the line or selText is empty
+                if (editor.document.offsetAt(selStart) === 0 || selText === "") {
                     return;
                 }
                 // return if translating -1 fails, i.e., there is no previous position
@@ -65,8 +75,6 @@ function moveSelections(direction) {
                 textEditor.delete(new vscode.Range(selStart.translate(0, -1), selStart));
                 // insert previous character after selected text
                 textEditor.insert(selEnd, prevChar);
-                // TODO: update selection in editor
-                editor.selection = new vscode.Selection(selStart.translate(0, -1), selEnd.translate(0, -1));
             });
         });
     }
