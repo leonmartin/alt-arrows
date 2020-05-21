@@ -3,21 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
 function updateSelections(direction, editor, selections) {
-    selections.forEach((sel) => {
-        const selStart = sel.start;
-        const selEnd = sel.end;
-        // TODO: only primary selection appears to be editable; "editor.selections[n] = something" does not change anything
-        if (direction === "right") {
-            editor.selections[1] = new vscode.Selection(selStart.translate(0, 1), selEnd.translate(0, 1));
-        }
-        else if (direction === "left") {
-            editor.selection = new vscode.Selection(selStart.translate(0, -1), selEnd.translate(0, -1));
-        }
-        // editor.selection = new vscode.Selection(
-        //   selStart.translate(0, 0),
-        //   selEnd.translate(0, 0)
-        // );
-    });
+    if (direction === "right") {
+        editor.selections = editor.selections.map((sel) => new vscode.Selection(sel.start.translate(0, 1), sel.end.translate(0, 1)));
+    }
+    else if (direction === "left") {
+        editor.selections = editor.selections.map((sel) => new vscode.Selection(sel.start.translate(0, -1), sel.end.translate(0, -1)));
+    }
+    // editor.selection = new vscode.Selection(
+    //   selStart.translate(0, 0),
+    //   selEnd.translate(0, 0)
+    // );
     console.log(editor.selections);
 }
 function moveSelections(direction) {
@@ -83,6 +78,7 @@ function moveSelections(direction) {
             });
         });
     }
+    updateSelections(direction, editor, currentSelections);
 }
 function activate(context) {
     console.log('"alt-arrows" is now active!');

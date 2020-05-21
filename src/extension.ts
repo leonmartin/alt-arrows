@@ -5,28 +5,25 @@ function updateSelections(
   editor: vscode.TextEditor,
   selections: vscode.Selection[]
 ) {
-  selections.forEach((sel) => {
-    const selStart = sel.start;
-    const selEnd = sel.end;
+  if (direction === "right") {
+    editor.selections = editor.selections.map(
+      (sel) =>
+        new vscode.Selection(sel.start.translate(0, 1), sel.end.translate(0, 1))
+    );
+  } else if (direction === "left") {
+    editor.selections = editor.selections.map(
+      (sel) =>
+        new vscode.Selection(
+          sel.start.translate(0, -1),
+          sel.end.translate(0, -1)
+        )
+    );
+  }
 
-    // TODO: only primary selection appears to be editable; "editor.selections[n] = something" does not change anything
-    if (direction === "right") {
-      editor.selections[1] = new vscode.Selection(
-        selStart.translate(0, 1),
-        selEnd.translate(0, 1)
-      );
-    } else if (direction === "left") {
-      editor.selection = new vscode.Selection(
-        selStart.translate(0, -1),
-        selEnd.translate(0, -1)
-      );
-    }
-
-    // editor.selection = new vscode.Selection(
-    //   selStart.translate(0, 0),
-    //   selEnd.translate(0, 0)
-    // );
-  });
+  // editor.selection = new vscode.Selection(
+  //   selStart.translate(0, 0),
+  //   selEnd.translate(0, 0)
+  // );
 
   console.log(editor.selections);
 }
@@ -112,6 +109,8 @@ function moveSelections(direction: String) {
       });
     });
   }
+
+  updateSelections(direction, editor, currentSelections);
 }
 
 export function activate(context: vscode.ExtensionContext) {
