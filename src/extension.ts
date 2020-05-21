@@ -5,13 +5,13 @@ function updateSelections(
   editor: vscode.TextEditor,
   selections: vscode.Selection[]
 ) {
-  selections.forEach((selection) => {
-    const selStart = selection.start;
-    const selEnd = selection.end;
+  selections.forEach((sel) => {
+    const selStart = sel.start;
+    const selEnd = sel.end;
 
     // TODO: only primary selection appears to be editable; "editor.selections[n] = something" does not change anything
     if (direction === "right") {
-      editor.selection = new vscode.Selection(
+      editor.selections[1] = new vscode.Selection(
         selStart.translate(0, 1),
         selEnd.translate(0, 1)
       );
@@ -21,7 +21,14 @@ function updateSelections(
         selEnd.translate(0, -1)
       );
     }
+
+    // editor.selection = new vscode.Selection(
+    //   selStart.translate(0, 0),
+    //   selEnd.translate(0, 0)
+    // );
   });
+
+  console.log(editor.selections);
 }
 
 function moveSelections(direction: String) {
@@ -42,10 +49,10 @@ function moveSelections(direction: String) {
   if (direction === "right") {
     // edit text
     editor.edit((textEditor) => {
-      currentSelections.forEach((selection) => {
-        const selStart = selection.start;
-        const selEnd = selection.end;
-        const selText = editor.document.getText(selection);
+      currentSelections.forEach((sel) => {
+        const selStart = sel.start;
+        const selEnd = sel.end;
+        const selText = editor.document.getText(sel);
 
         // get next char
         const nextChar = editor.document.getText(
@@ -73,10 +80,10 @@ function moveSelections(direction: String) {
   } else if (direction === "left") {
     // edit text
     editor.edit((textEditor) => {
-      currentSelections.forEach((selection) => {
-        const selStart = selection.start;
-        const selEnd = selection.end;
-        const selText = editor.document.getText(selection);
+      currentSelections.forEach((sel) => {
+        const selStart = sel.start;
+        const selEnd = sel.end;
+        const selText = editor.document.getText(sel);
 
         // return if the selection starts at the beginning of the line or selText is empty
         if (editor.document.offsetAt(selStart) === 0 || selText === "") {
