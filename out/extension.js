@@ -2,91 +2,91 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
-function updateSelections(direction, editor, selections) {
+function validate(editor, selection, movingDist, direction) {
+    const selStart = selection.start;
+    const selEnd = selection.end;
+    const selText = editor.document.getText(selection);
+    let valid = true;
     if (direction === "right") {
-        editor.selections = editor.selections.map((sel) => new vscode.Selection(sel.start.translate(0, 1), sel.end.translate(0, 1)));
+        // return false if moving distance exceeds available space or selText is empty
+        const lineLimit = editor.document.lineAt(selStart.line).range.end.character;
+        if (lineLimit - selEnd.character < movingDist || selText === "") {
+            valid = false;
+        }
     }
     else if (direction === "left") {
-        editor.selections = editor.selections.map((sel) => new vscode.Selection(sel.start.translate(0, -1), sel.end.translate(0, -1)));
+        // return false if moving distance exceeds available space or selText is empty
+        if (selStart.character < movingDist || selText === "") {
+            valid = false;
+        }
     }
-    // editor.selection = new vscode.Selection(
-    //   selStart.translate(0, 0),
-    //   selEnd.translate(0, 0)
-    // );
-    console.log(editor.selections);
+    return valid;
 }
-function moveSelections(direction) {
+function updateSelections(direction, editor, movingDist) {
+    console.log(editor.selections);
+    // update selection if valid, retain selection if invalid
+    if (direction === "right") {
+        editor.selections = editor.selections.map((sel) => {
+            if (validate(editor, sel, movingDist, direction)) {
+                return new vscode.Selection(sel.start.translate(0, movingDist), sel.end.translate(0, movingDist));
+            }
+            return sel;
+        });
+    }
+    else if (direction === "left") {
+        editor.selections = editor.selections.map((sel) => {
+            if (validate(editor, sel, movingDist, direction)) {
+                return new vscode.Selection(sel.start.translate(0, -movingDist), sel.end.translate(0, -movingDist));
+            }
+            return sel;
+        });
+    }
+}
+function moveSelections(direction, movingDist) {
     // get active text editor
     const editor = vscode.window.activeTextEditor;
-    // return if editor is null
+    // return if editor is undefined
     if (!editor) {
-        console.log("ERROR: editor is null!");
+        console.log("Error: editor must not be undefined!");
         return;
     }
-    const currentSelections = editor.selections;
-    //
-    //
-    // ALT+RIGHT
-    if (direction === "right") {
-        // edit text
-        editor.edit((textEditor) => {
-            currentSelections.forEach((sel) => {
-                const selStart = sel.start;
-                const selEnd = sel.end;
-                const selText = editor.document.getText(sel);
-                // get next char
-                const nextChar = editor.document.getText(new vscode.Range(selEnd, selEnd.translate(0, 1)));
-                // return if there is no next char or selText is empty
-                if (nextChar === "" || selText === "") {
-                    return;
-                }
-                // temporarly delete selected text
-                textEditor.delete(new vscode.Range(selStart, selEnd));
-                // insert selected text one character to the right
-                textEditor.insert(selEnd.translate(0, 1), selText);
-            });
+    // edit text
+    editor.edit((textEditor) => {
+        // skip if invalid
+        editor.selections.forEach((sel) => {
+            if (!validate(editor, sel, movingDist, direction)) {
+                return;
+            }
+            const selStart = sel.start;
+            const selEnd = sel.end;
+            const selText = editor.document.getText(sel);
+            // temporarly delete selected text
+            textEditor.delete(new vscode.Range(selStart, selEnd));
+            //
+            //
+            // ALT+RIGHT
+            if (direction === "right") {
+                // insert selected text after movingDist characters to the right
+                textEditor.insert(selEnd.translate(0, movingDist), selText);
+                //
+                //
+                // ALT+LEFT
+            }
+            else if (direction === "left") {
+                // insert selected text before movingDist characters to the left
+                textEditor.insert(selStart.translate(0, -movingDist), selText);
+            }
         });
-        updateSelections(direction, editor, currentSelections);
-        //
-        //
-        // ALT+LEFT
-    }
-    else if (direction === "left") {
-        // edit text
-        editor.edit((textEditor) => {
-            currentSelections.forEach((sel) => {
-                const selStart = sel.start;
-                const selEnd = sel.end;
-                const selText = editor.document.getText(sel);
-                // return if the selection starts at the beginning of the line or selText is empty
-                if (editor.document.offsetAt(selStart) === 0 || selText === "") {
-                    return;
-                }
-                // return if translating -1 fails, i.e., there is no previous position
-                try {
-                    selStart.translate(0, -1);
-                }
-                catch (e) {
-                    return;
-                }
-                // get previous char
-                const prevChar = editor.document.getText(new vscode.Range(selStart.translate(0, -1), selStart));
-                // temporarly delete previous char
-                textEditor.delete(new vscode.Range(selStart.translate(0, -1), selStart));
-                // insert previous character after selected text
-                textEditor.insert(selEnd, prevChar);
-            });
-        });
-    }
-    updateSelections(direction, editor, currentSelections);
+    });
+    updateSelections(direction, editor, movingDist);
 }
 function activate(context) {
     console.log('"alt-arrows" is now active!');
     let altPlusRight = vscode.commands.registerCommand("alt-arrows.altPlusRight", () => {
-        moveSelections("right");
+        moveSelections("right", 1);
     });
     let altPlusLeft = vscode.commands.registerCommand("alt-arrows.altPlusLeft", () => {
-        moveSelections("left");
+        moveSelections("left", 1);
     });
     context.subscriptions.push(altPlusRight, altPlusLeft);
 }
