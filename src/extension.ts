@@ -3,24 +3,23 @@ import * as vscode from "vscode";
 function validate(
   editor: vscode.TextEditor,
   selection: vscode.Selection,
-  movingDist: number,
-  direction: String
+  movingDist: number
 ) {
   const selStart = selection.start;
   const selEnd = selection.end;
   const selText = editor.document.getText(selection);
   let valid = true;
 
-  if (direction === "right") {
+  if (movingDist > 0) {
     // return false if moving distance exceeds available space or selText is empty
     const lineLimit = editor.document.lineAt(selStart.line).range.end.character;
 
     if (lineLimit - selEnd.character < movingDist || selText === "") {
       valid = false;
     }
-  } else if (direction === "left") {
+  } else {
     // return false if moving distance exceeds available space or selText is empty
-    if (selStart.character < movingDist || selText === "") {
+    if (selStart.character < Math.abs(movingDist) || selText === "") {
       valid = false;
     }
   }
@@ -29,16 +28,14 @@ function validate(
 }
 
 function updateSelections(
-  direction: String,
   editor: vscode.TextEditor,
   movingDist: number
 ) {
-  console.log(editor.selections);
 
   // update selection if valid, retain selection if invalid
-  if (direction === "right") {
+  if (movingDist > 0) {
     editor.selections = editor.selections.map((sel) => {
-      if (validate(editor, sel, movingDist, direction)) {
+      if (validate(editor, sel, movingDist)) {
         return new vscode.Selection(
           sel.start.translate(0, movingDist),
           sel.end.translate(0, movingDist)
@@ -46,12 +43,12 @@ function updateSelections(
       }
       return sel;
     });
-  } else if (direction === "left") {
+  } else {
     editor.selections = editor.selections.map((sel) => {
-      if (validate(editor, sel, movingDist, direction)) {
+      if (validate(editor, sel, movingDist)) {
         return new vscode.Selection(
-          sel.start.translate(0, -movingDist),
-          sel.end.translate(0, -movingDist)
+          sel.start.translate(0, movingDist),
+          sel.end.translate(0, movingDist)
         );
       }
       return sel;
@@ -59,7 +56,7 @@ function updateSelections(
   }
 }
 
-function moveSelections(direction: String, movingDist: number) {
+function moveSelections(movingDist: number) {
   // get active text editor
   const editor = vscode.window.activeTextEditor;
 
@@ -73,7 +70,7 @@ function moveSelections(direction: String, movingDist: number) {
   editor.edit((textEditor) => {
     // skip if invalid
     editor.selections.forEach((sel) => {
-      if (!validate(editor, sel, movingDist, direction)) {
+      if (!validate(editor, sel, movingDist)) {
         return;
       }
 
@@ -87,21 +84,21 @@ function moveSelections(direction: String, movingDist: number) {
       //
       //
       // ALT+RIGHT
-      if (direction === "right") {
+      if (movingDist > 0) {
         // insert selected text after movingDist characters to the right
         textEditor.insert(selEnd.translate(0, movingDist), selText);
 
         //
         //
         // ALT+LEFT
-      } else if (direction === "left") {
+      } else {
         // insert selected text before movingDist characters to the left
-        textEditor.insert(selStart.translate(0, -movingDist), selText);
+        textEditor.insert(selStart.translate(0, movingDist), selText);
       }
     });
   });
 
-  updateSelections(direction, editor, movingDist);
+  updateSelections(editor, movingDist);
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -110,18 +107,25 @@ export function activate(context: vscode.ExtensionContext) {
   let altPlusRight = vscode.commands.registerCommand(
     "alt-arrows.altPlusRight",
     () => {
-      moveSelections("right", 1);
+      moveSelections(1);
     }
   );
 
   let altPlusLeft = vscode.commands.registerCommand(
     "alt-arrows.altPlusLeft",
     () => {
-      moveSelections("left", 1);
+      moveSelections(-1);
     }
   );
 
-  context.subscriptions.push(altPlusRight, altPlusLeft);
+  let shiftPlusAltPlusRight = vscode.commands.registerCommand(
+    "alt-arrows.shiftPlusAltPlusRight",
+    () => {
+      moveSelections(-5);
+    }
+  );
+
+  context.subscriptions.push(altPlusRight, altPlusLeft, shiftPlusAltPlusRight);
 }
 
 export function deactivate() {}

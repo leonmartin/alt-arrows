@@ -11,7 +11,8 @@
 	],
 	"activationEvents": [
 		"onCommand:alt-arrows.altPlusRight",
-		"onCommand:alt-arrows.altPlusLeft"
+		"onCommand:alt-arrows.altPlusLeft",
+		"onCommand:alt-arrows.shiftPlusAltPlusRight"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -24,6 +25,11 @@
 			{
 				"command": "alt-arrows.altPlusLeft",
 				"key": "alt+left",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "alt-arrows.shiftPlusAltPlusRight",
+				"key": "shift+alt+right",
 				"when": "editorTextFocus"
 			}
 		]
